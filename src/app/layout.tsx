@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Grupo Caldas - Dashboard Financiero",
-  description: "Panel de control CxC, CxP y costos para Grupo Caldas"
+  title: "Grupo Caldas - Dashboard",
+  description:
+    "Panel financiero de Grupo Caldas para CxC, CxP y costos."
 };
 
 export default function RootLayout({
@@ -13,7 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="bg-background text-slate-100 antialiased">{children}</body>
+      <body className="bg-background text-slate-100 antialiased">
+        {children}
+      </body>
     </html>
   );
 }
