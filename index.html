@@ -1,8 +1,130 @@
-<!doctype html>
-<html>
-  <head><meta charset="utf-8" /><title>GRUPO CALDAS</title></head>
-  <body>
-    <h1>Hola, Hola, actualización #1</h1>
-    <p>Primer archivo del proyecto.</p>
-  </body>
-</html>
+Eres un ingeniero full-stack senior. Genera una aplicación completa (Next.js + TypeScript) basada en una línea gráfica existente exportada por Stitch, y que pueda leer datos desde dos archivos Excel (CxC y CxP), cargarlos a Supabase y visualizarlos en dashboards. 
+
+RESTRICCIONES (OBLIGATORIO):
+- NO modifiques el contenido de los archivos fuente (Excel y HTML de Stitch). Solo consúmelos/úsalos como referencia.
+- Si crees que hace falta un cambio de contenido o de estructura en los archivos fuente, NO lo hagas: escribe una propuesta y pide autorización antes.
+- Evita soluciones frágiles: prioriza un flujo que funcione igual en local y en Vercel.
+
+INSUMOS DISPONIBLES EN EL PROYECTO (asume estas rutas locales):
+1) Línea gráfica Stitch (ZIP ya descomprimible): 
+   /mnt/data/stitch_overview_dashboard.zip
+   Dentro hay 4 pantallas con code.html + screen.png:
+   - stitch_overview_dashboard/resumen_general_grupo_caldas/code.html
+   - stitch_overview_dashboard/cxc_grupo_caldas/code.html
+   - stitch_overview_dashboard/cxp_grupo_caldas/code.html
+   - stitch_overview_dashboard/costos_grupo_caldas/code.html
+   Usa estos HTML como guía visual: colores, tipografía, layout, tarjetas, tablas, navegación.
+   No copies “tal cual” el HTML como página estática; conviértelo en componentes React + Tailwind manteniendo el look&feel.
+
+2) Excel CxC:
+   /mnt/data/CARTERA_20260225101026.xlsx
+   Hoja: mys_7EM0LT0TR
+   Columnas (principales): tipo,codfactol,fechaent,codcli,fechfactol,fecha,fechven,vence,vencidas,dias,valorfact,abonos,deudafa,nomcli,estadofac,nomgrupo,ciudad,dpto,utilidad,total_utilidad,comision,... (hay más).
+
+3) Excel CxP:
+   /mnt/data/XPAGAR_20260225101009.xlsx
+   Hoja: mys_7EM0LSO1Q
+   Columnas: tipo,codfactol,codfacte,fechaent,codcli,fechfactol,nomcli,fechven,vencidas,valorfact,abonos,descuentos,reteica_vlr,reteiva_vlr,retecree_vlr,bruta,deudafa,grupocli,rtefte,tipo_tercero,estadofac,nomgrupo,plazo,nitpro,dv,telepro,telepro2,retencion,direpro,observacion,imp_observacion,otros,utilidad,total_utilidad,comision,tipoid,apellido1,apellido2,nombre1,nombre2,razon_social,tipo_documento,titulo,titulo2,seleccion,codciu,dias,ciudad,dpto,coddian_dpto,coddian_ciudad
+
+OBJETIVO FUNCIONAL:
+- Construir un panel con 4 rutas:
+  1) /dashboard (Resumen General)
+  2) /dashboard/cxc (Cuentas por Cobrar)
+  3) /dashboard/cxp (Cuentas por Pagar)
+  4) /dashboard/costos (Costos y Rentabilidad)
+- Cada dashboard debe:
+  - mostrar KPI cards (totales) + charts + tabla detallada
+  - tener filtros por rango de fechas y búsqueda
+  - permitir drill-down básico: al hacer clic en un bloque (ej. aging 90+) filtra la tabla
+- Debe existir una forma segura y repetible de llevar los Excel a Supabase:
+  - Opción preferida: scripts de importación (Node) que se ejecutan localmente para cargar los Excel a Supabase (no depende de subir Excel a Vercel).
+  - Debe crear tablas en Supabase y hacer upsert.
+  - Debe incluir normalización de tipos: fechas, números, strings.
+  - Debe calcular campos derivados en la app o en views simples:
+    - saldo_cxc = valorfact - abonos (en CxC)
+    - saldo_cxp = valorfact - abonos - descuentos - reteica_vlr - reteiva_vlr - retecree_vlr - rtefte - retencion (en CxP)
+    - dias_mora = max(0, hoy - fechven) (si aplica)
+    - rango_mora: 0-30,31-60,61-90,90+
+
+STACK TÉCNICO (OBLIGATORIO):
+- Next.js (App Router) + TypeScript
+- TailwindCSS
+- Componentes con shadcn/ui (o UI minimal equivalente)
+- Charts: recharts
+- Supabase: @supabase/supabase-js
+- Excel parsing: xlsx (SheetJS) en scripts Node (NO en el browser)
+
+SEGURIDAD / ENTORNOS:
+- Variables de entorno:
+  - NEXT_PUBLIC_SUPABASE_URL
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY
+  - SUPABASE_SERVICE_ROLE_KEY (solo server/scripts, nunca en el cliente)
+- El dashboard puede leer datos con anon key si el proyecto es privado; pero para importar usa SERVICE_ROLE_KEY en scripts.
+- Si propones RLS, explícitalo como recomendación (no lo actives automáticamente sin pedir autorización).
+
+ENTREGABLES (archivos a generar):
+1) Estructura del proyecto:
+   - src/app/dashboard/page.tsx
+   - src/app/dashboard/cxc/page.tsx
+   - src/app/dashboard/cxp/page.tsx
+   - src/app/dashboard/costos/page.tsx
+   - src/components/layout/Sidebar.tsx (navegación según Stitch)
+   - src/components/layout/Header.tsx
+   - src/components/kpi/KpiCard.tsx
+   - src/components/charts/* (componentes para line/bar/donut)
+   - src/components/tables/DataTable.tsx (tabla reusable)
+   - src/components/filters/DateRangeFilter.tsx
+   - src/lib/supabase/client.ts
+   - src/lib/supabase/server.ts (si se usa server actions o route handlers)
+   - src/lib/types.ts (tipos de filas CxC y CxP)
+   - src/lib/format.ts (format moneda/fechas)
+   - src/lib/metrics.ts (funciones KPI y agregaciones si no hay views)
+2) Scripts de importación (OBLIGATORIO):
+   - scripts/import-cxc.ts
+   - scripts/import-cxp.ts
+   - scripts/create-tables.sql (SQL para crear tablas destino en Supabase, sin RLS por defecto)
+   Los scripts deben:
+   - leer los Excel desde /mnt/data/*.xlsx (asume que en dev existen)
+   - convertir columnas a tipos correctos
+   - insertar a tablas supabase: public.cxc_facturas y public.cxp_facturas
+   - loggear conteos y errores amigables
+3) Documentación en README.md:
+   - Requisitos (Node)
+   - Cómo configurar .env.local
+   - Cómo crear tablas (ejecutar SQL en Supabase)
+   - Cómo correr import scripts
+   - Cómo correr la app local
+   - Cómo desplegar en Vercel (variables de entorno)
+
+DISEÑO (IMPORTANTÍSIMO):
+- Replica el look & feel de Stitch:
+  - layout con sidebar, header, cards, secciones y tipografía similar
+  - no inventes un diseño diferente
+  - usa como guía los code.html mencionados
+- Dashboard CxC debe incluir:
+  - KPI: Total facturado, Total abonos, Saldo total, Vencido (saldo con dias_mora>0)
+  - Chart 1: Serie por mes (saldo o facturado)
+  - Chart 2: Aging (barras por rango_mora)
+  - Chart 3: Top clientes por saldo
+  - Tabla: últimas facturas / lista filtrable
+- Dashboard CxP debe incluir:
+  - KPI: Total por pagar, Abonos, Saldo neto, Vencido
+  - Chart: Aging + Top proveedores + Serie mensual
+  - Tabla: facturas/proveedores filtrable
+- Costos:
+  - KPI: utilidad total, margen (utilidad/bruta), comisiones, otros
+  - Chart: utilidad por mes, margen por mes
+  - Tabla: detalle
+
+NO ME PREGUNTES COSAS QUE PUEDES INFERIR.
+Solo pregunta si falta algo imprescindible para ejecutar.
+
+FINALIZA entregando:
+- todos los archivos listos (contenido completo)
+- comandos para ejecutar:
+  npm install
+  npm run dev
+  npm run build
+  node scripts/import-cxc.ts
+  node scripts/import-cxp.ts
+- y checklist de “antes de subir a Vercel”.
