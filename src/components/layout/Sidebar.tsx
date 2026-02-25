@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import clsx from "classnames";
+import classNames from "classnames";
 
 const navItems = [
   { href: "/dashboard", label: "Resumen general" },
@@ -35,7 +35,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={clsx(
+              className={classNames(
                 "flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-colors",
                 active
                   ? "bg-accent/90 text-white shadow-card"
